@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Cricket Streaming</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0f0f23;
+            --bg-secondary: #1a1a3e;
+            --accent: #6366f1;
+            --accent-secondary: #818cf8;
+            --surface: rgba(99, 102, 241, 0.05);
+            --surface-hover: rgba(99, 102, 241, 0.08);
+            --border: rgba(99, 102, 241, 0.2);
+            --glow: rgba(99, 102, 241, 0.3);
+            --text-dim: rgba(255, 255, 255, 0.6);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            padding-top: 30px;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, var(--accent) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, var(--bg-secondary) 0%, transparent 50%);
+            opacity: 0.05;
+            animation: floatingGradient 20s ease infinite;
+            z-index: -1;
+        }
+
+        @keyframes floatingGradient {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-20px, -20px) rotate(120deg); }
+            66% { transform: translate(20px, -10px) rotate(240deg); }
+        }
+
+        /* Particle container - HIGHEST Z-INDEX to overlay everything */
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        /* Enhanced particle styling */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleAnimation 3s ease-out forwards;
+            pointer-events: none;
+            box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent);
+        }
+
+        @keyframes particleAnimation {
+            0% {
+                opacity: 0;
+                transform: scale(0) translate(0, 0);
+            }
+            20% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.3) translate(var(--tx), var(--ty));
+            }
+        }
+
+        /* Special glowing particles */
+        .particle.glow {
+            width: 6px;
+            height: 6px;
+            background: radial-gradient(circle, var(--accent-secondary) 0%, transparent 70%);
+            box-shadow: 
+                0 0 10px var(--accent-secondary),
+                0 0 20px var(--accent-secondary),
+                0 0 30px var(--accent-secondary);
+            animation: particleGlowAnimation 4s ease-out forwards;
+        }
+
+        @keyframes particleGlowAnimation {
+            0% {
+                opacity: 0;
+                transform: scale(0) translate(0, 0);
+                filter: blur(0px);
+            }
+            20% {
+                opacity: 1;
+                transform: scale(1.5);
+                filter: blur(0px);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.3) translate(var(--tx), var(--ty));
+                filter: blur(2px);
+            }
+        }
+
+        /* Trail effect for particles */
+        .particle-trail {
+            position: absolute;
+            width: 30px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+            opacity: 0;
+            animation: trailAnimation 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes trailAnimation {
+            0% {
+                opacity: 0;
+                transform: scaleX(0);
+            }
+            50% {
+                opacity: 0.6;
+                transform: scaleX(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scaleX(0) translateX(var(--tx));
+            }
+        }
+
+        /* Enhanced Popup Modal */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { 
+                opacity: 0;
+                backdrop-filter: blur(0px);
+            }
+            to { 
+                opacity: 1;
+                backdrop-filter: blur(10px);
+            }
+        }
+
+        /* Animated border for popup */
+        .popup-content::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, 
+                var(--accent), 
+                var(--accent-secondary), 
+                var(--accent), 
+                var(--accent-secondary)
+            );
+            border-radius: 30px;
+            opacity: 0.5;
+            z-index: -1;
+            animation: borderRotate 4s linear infinite;
+            background-size: 300% 300%;
+        }
+
+        @keyframes borderRotate {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Floating elements inside popup */
+        .popup-content::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+            opacity: 0.1;
+            animation: rotate 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .popup-content {
+            background: linear-gradient(135deg, 
+                rgba(25, 25, 45, 0.95) 0%, 
+                rgba(15, 15, 35, 0.98) 50%,
+                rgba(30, 20, 50, 0.95) 100%
+            );
+            padding: 60px 80px;
+            border-radius: 30px;
+            text-align: center;
+            position: relative;
+            box-shadow: 
+                0 25px 80px rgba(0, 0, 0, 0.5),
+                0 0 100px rgba(99, 102, 241, 0.2),
+                inset 0 0 100px rgba(99, 102, 241, 0.05);
+            animation: slideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px) scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .popup-content p {
+            font-size: 1.8rem;
+            margin-bottom: 40px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+            position: relative;
+        }
+
+        .popup-logo {
+            font-size: 60px;
+            margin-bottom: 30px;
+            color: var(--accent);
+            animation: bounce 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 30px var(--glow));
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .close-popup {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+            color: #fff;
+            border: none;
+            padding: 20px 50px;
+            font-size: 1.3rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            box-shadow: 
+                0 10px 30px rgba(99, 102, 241, 0.4),
+                inset 0 0 20px rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+
+        .close-popup::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: all 0.6s ease;
+            border-radius: 50%;
+        }
+
+        .close-popup:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .close-popup:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 
+                0 15px 40px rgba(99, 102, 241, 0.6),
+                inset 0 0 30px rgba(255, 255, 255, 0.2);
+            letter-spacing: 3px;
+        }
+
+        .heart {
+            color: #ef4444;
+            animation: heartBeat 1.5s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { 
+                transform: scale(1);
+                filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
+            }
+            50% { 
+                transform: scale(1.3);
+                filter: drop-shadow(0 0 20px rgba(239, 68, 68, 1));
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Iframe containers - lower z-index than particles */
+        .score-iframe-container,
+        .video-iframe-container {
+            width: 100%;
+            border: none;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .score-iframe-container iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .video-iframe-container iframe {
+            width: 100%;
+            height: 700px;
+            border: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Loading state */
+        .iframe-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 400px;
+            font-size: 1.2rem;
+            color: var(--text-dim);
+        }
+
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            animation: slideInRight 0.5s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .popup-content {
+                padding: 40px 30px;
+                margin: 20px;
+            }
+
+            .popup-content p {
+                font-size: 1.4rem;
+            }
+
+            .popup-logo {
+                font-size: 40px;
+            }
+
+            .score-iframe-container iframe {
+                height: 500px;
+            }
+
+            .video-iframe-container iframe {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Particle container -->
+    <div id="particles"></div>
+
+    <!-- Enhanced Popup Modal -->
+    <div class="popup-overlay" id="welcomePopup">
+        <div class="popup-content">
+            <div class="popup-logo">
+                <i class="fas fa-play-circle"></i>
+            </div>
+            <p>Made by Gajju</p>
+            <button class="close-popup" onclick="closePopup()">
+                <span>Enter</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Score Display Component -->
+        <div class="score-iframe-container">
+            <iframe id="scoreFrame" src="score-display.html" frameborder="0" scrolling="no"></iframe>
+        </div>
+
+        <!-- Video Player Component -->
+        <div class="video-iframe-container">
+            <iframe id="videoFrame" src="video-player.html" frameborder="0" scrolling="no"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        window.config = {
+            backendUrl: (() => {
+                const hostname = window.location.hostname;
+                
+                if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                    return 'http://localhost:5000';
+                }
+                
+                if (window.location.protocol === 'file:') {
+                    return 'http://localhost:5000';
+                }
+                
+                // Update this to your actual backend URL when deployed
+                return 'https://your-python-backend.onrender.com';
+            })()
+        };
+
+        // Enhanced Particle System with more particles
+        class ParticleSystem {
+            constructor() {
+                this.container = document.getElementById('particles');
+                this.particleCount = 0;
+                this.maxParticles = 50;
+                this.init();
+            }
+
+            init() {
+                // Don't disable on mobile anymore - let users enjoy particles everywhere
+                document.addEventListener('mousemove', (e) => {
+                    // Create multiple particles on mouse move
+                    if (Math.random() > 0.7) { // Increased chance from 0.95 to 0.7
+                        this.createParticle(e.clientX, e.clientY);
+                        
+                        // Sometimes create a cluster of particles
+                        if (Math.random() > 0.8) {
+                            setTimeout(() => this.createParticle(e.clientX + 10, e.clientY + 10), 50);
+                            setTimeout(() => this.createParticle(e.clientX - 10, e.clientY - 10), 100);
+                            setTimeout(() => this.createParticle(e.clientX + 5, e.clientY - 5), 150);
+                        }
+                    }
+                });
+
+                // Create particles on click for extra effect
+                document.addEventListener('click', (e) => {
+                    // Create a burst of particles on click
+                    for (let i = 0; i < 8; i++) {
+                        setTimeout(() => {
+                            const offsetX = (Math.random() - 0.5) * 30;
+                            const offsetY = (Math.random() - 0.5) * 30;
+                            this.createParticle(e.clientX + offsetX, e.clientY + offsetY);
+                        }, i * 50);
+                    }
+                });
+
+                // Create ambient particles periodically
+                setInterval(() => {
+                    if (this.particleCount < this.maxParticles) {
+                        const x = Math.random() * window.innerWidth;
+                        const y = Math.random() * window.innerHeight;
+                        this.createParticle(x, y, true);
+                    }
+                }, 2000);
+            }
+
+            createParticle(x, y, isAmbient = false) {
+                if (this.particleCount >= this.maxParticles) return;
+                
+                this.particleCount++;
+                
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // Sometimes create glowing particles
+                if (Math.random() > 0.8) {
+                    particle.className += ' glow';
+                }
+                
+                // Randomize particle properties
+                const size = Math.random() * 4 + 2; // 2-6px
+                const duration = Math.random() * 2 + 2; // 2-4s
+                const distance = Math.random() * 100 + 50; // 50-150px travel distance
+                
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                
+                // Set random movement direction
+                const angle = Math.random() * Math.PI * 2;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                
+                particle.style.setProperty('--tx', tx + 'px');
+                particle.style.setProperty('--ty', ty + 'px');
+                particle.style.animationDuration = duration + 's';
+                
+                // Add different colors occasionally
+                if (Math.random() > 0.7) {
+                    particle.style.background = 'var(--accent-secondary)';
+                    particle.style.boxShadow = '0 0 8px var(--accent-secondary), 0 0 16px var(--accent-secondary)';
+                } else if (Math.random() > 0.9) {
+                    particle.style.background = '#fbbf24';
+                    particle.style.boxShadow = '0 0 8px #fbbf24, 0 0 16px #fbbf24';
+                }
+                
+                // Ambient particles have different animation
+                if (isAmbient) {
+                    particle.style.animationDuration = (duration * 2) + 's';
+                    particle.style.opacity = '0.5';
+                }
+                
+                this.container.appendChild(particle);
+                
+                // Remove particle after animation completes
+                setTimeout(() => {
+                    particle.remove();
+                    this.particleCount--;
+                }, duration * 1000);
+            }
+        }
+
+        // Initialize particle system
+        const particleSystem = new ParticleSystem();
+
+        // Close popup function
+        function closePopup() {
+            const popup = document.getElementById('welcomePopup');
+            popup.style.animation = 'fadeOut 0.5s ease';
+            setTimeout(() => {
+                popup.style.display = 'none';
+            }, 500);
+        }
+
+        // Initialize iframe components with retry mechanism
+        function initializeScoreComponent(retryCount = 0) {
+            const maxRetries = 5;
+            const scoreFrame = document.getElementById('scoreFrame');
+            
+            if (!scoreFrame) {
+                console.error('Score frame not found');
+                return;
+            }
+
+            try {
+                // Check if the iframe content is accessible
+                const iframeWindow = scoreFrame.contentWindow;
+                const iframeDocument = scoreFrame.contentDocument || iframeWindow.document;
+                
+                if (iframeDocument.readyState === 'complete' && iframeWindow.CricketScoreModule) {
+                    console.log('Initializing score module...');
+                    
+                    // Set the backend URL
+                    iframeWindow.CricketScoreModule.config.backendUrl = window.config.backendUrl;
+                    
+                    // Start live updates immediately
+                    iframeWindow.CricketScoreModule.startLiveUpdates();
+                    
+                    console.log('Score module initialized successfully');
+                } else {
+                    // Retry if not ready
+                    if (retryCount < maxRetries) {
+                        console.log(`Score module not ready, retrying... (${retryCount + 1}/${maxRetries})`);
+                        setTimeout(() => initializeScoreComponent(retryCount + 1), 500);
+                    } else {
+                        console.error('Failed to initialize score module after maximum retries');
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing score component:', error);
+                
+                // Retry on error
+                if (retryCount < maxRetries) {
+                    setTimeout(() => initializeScoreComponent(retryCount + 1), 500);
+                }
+            }
+        }
+
+        // Initialize all components
+        function initializeComponents() {
+            const scoreFrame = document.getElementById('scoreFrame');
+            const videoFrame = document.getElementById('videoFrame');
+            
+            // Initialize score frame
+            if (scoreFrame) {
+                scoreFrame.onload = function() {
+                    console.log('Score frame loaded');
+                    
+                    // Pass configuration first
+                    try {
+                        scoreFrame.contentWindow.postMessage({
+                            type: 'config',
+                            config: window.config
+                        }, '*');
+                    } catch (e) {
+                        console.error('Error sending config to score frame:', e);
+                    }
+                    
+                    // Initialize score component with a small delay to ensure everything is ready
+                    setTimeout(() => {
+                        initializeScoreComponent();
+                    }, 100);
+                };
+                
+                // If iframe is already loaded (e.g., when navigating back)
+                if (scoreFrame.contentDocument && scoreFrame.contentDocument.readyState === 'complete') {
+                    console.log('Score frame already loaded, initializing...');
+                    setTimeout(() => {
+                        initializeScoreComponent();
+                    }, 100);
+                }
+            }
+            
+            // Initialize video frame
+            if (videoFrame) {
+                videoFrame.onload = function() {
+                    console.log('Video player loaded');
+                };
+            }
+        }
+
+        // Handle messages from iframes
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'scoreUpdate') {
+                console.log('Score updated:', event.data.data);
+            } else if (event.data.type === 'languageChange') {
+                console.log('Language changed to:', event.data.language);
+            }
+        });
+
+        // Auto-close popup after 10 seconds
+        setTimeout(() => {
+            const popup = document.getElementById('welcomePopup');
+            if (popup && popup.style.display !== 'none') {
+                closePopup();
+            }
+        }, 10000);
+
+        // Handle iframe resizing
+        function resizeIframe(iframe) {
+            try {
+                const height = iframe.contentWindow.document.body.scrollHeight;
+                if (height > 0) {
+                    iframe.style.height = height + 'px';
+                }
+            } catch (e) {
+                // Silently handle cross-origin errors
+            }
+        }
+
+        // Resize iframes periodically
+        setInterval(() => {
+            const scoreFrame = document.getElementById('scoreFrame');
+            const videoFrame = document.getElementById('videoFrame');
+            
+            if (scoreFrame) resizeIframe(scoreFrame);
+            if (videoFrame) resizeIframe(videoFrame);
+        }, 1000);
+
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+            const scoreFrame = document.getElementById('scoreFrame');
+            
+            if (document.hidden) {
+                // Page is hidden, pause updates
+                if (scoreFrame && scoreFrame.contentWindow && scoreFrame.contentWindow.CricketScoreModule) {
+                    scoreFrame.contentWindow.CricketScoreModule.stopUpdates();
+                }
+            } else {
+                // Page is visible, resume updates
+                if (scoreFrame && scoreFrame.contentWindow && scoreFrame.contentWindow.CricketScoreModule) {
+                    scoreFrame.contentWindow.CricketScoreModule.startLiveUpdates();
+                }
+            }
+        });
+
+        // Monitor network status
+        window.addEventListener('online', () => {
+            console.log('Network: Online');
+            document.querySelectorAll('iframe').forEach(iframe => {
+                try {
+                    iframe.contentWindow.postMessage({ type: 'network', status: 'online' }, '*');
+                } catch (e) {
+                    // Handle cross-origin errors
+                }
+            });
+        });
+
+        window.addEventListener('offline', () => {
+                        console.log('Network: Offline');
+            document.querySelectorAll('iframe').forEach(iframe => {
+                try {
+                    iframe.contentWindow.postMessage({ type: 'network', status: 'offline' }, '*');
+                } catch (e) {
+                    // Handle cross-origin errors
+                }
+            });
+        });
+
+        // Error handler
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+        });
+
+        // Prevent right-click on certain elements
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target.tagName === 'IFRAME') {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Refresh shortcut
+            if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                const scoreFrame = document.getElementById('scoreFrame');
+                if (scoreFrame && scoreFrame.contentWindow && scoreFrame.contentWindow.refreshScores) {
+                    scoreFrame.contentWindow.refreshScores();
+                }
+            }
+        });
+
+        // Initialize on DOM content loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing components...');
+            
+            // Initialize components immediately when DOM is ready
+            initializeComponents();
+            
+            // Also check backend connectivity
+            fetch(`${window.config.backendUrl}/api/status`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Backend status:', data);
+                })
+                .catch(error => {
+                    console.warn('Backend not available:', error);
+                });
+        });
+
+        // Additional initialization on window load (fallback)
+        window.addEventListener('load', () => {
+            console.log('🏏 Cricket Live Streaming App Ready!');
+            
+            // Re-initialize if not already done
+            const scoreFrame = document.getElementById('scoreFrame');
+            if (scoreFrame && scoreFrame.contentWindow && !scoreFrame.contentWindow.CricketScoreModule?.config.updateInterval) {
+                console.log('Re-initializing score component on window load...');
+                initializeScoreComponent();
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            const scoreFrame = document.getElementById('scoreFrame');
+            if (scoreFrame && scoreFrame.contentWindow && scoreFrame.contentWindow.CricketScoreModule) {
+                scoreFrame.contentWindow.CricketScoreModule.stopUpdates();
+            }
+        });
+
+        console.log('Combined app initialized');
+    </script>
+</body>
+</html>
